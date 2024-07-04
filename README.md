@@ -16,24 +16,25 @@ This really fucking simple Node app serves as a Prometheus exporter for AdGuard 
 
 1. Clone the repository:
 
-    ```bash
-    git clone <repository-url>
-    cd adguard-prometheus-exporter
-    ```
+```bash
+git clone <repository-url>
+cd adguard-prometheus-exporter
+```
 
 2. Install dependencies:
 
-    ```bash
-    ```
+```bash
+npm i
+```
 
 3. Configure environment variables in .env:
 
-    ```bash
-    ADGUARD_URL=<url>
-    ADGUARD_USERNAME=<username>
-    ADGUARD_PASSWORD=<password>
-    EXPORTER_PORT=<port>
-    ```
+```bash
+ADGUARD_URL=<url>
+ADGUARD_USERNAME=<username>
+ADGUARD_PASSWORD=<password>
+EXPORTER_PORT=<port>
+```
 
 5. Start the exporter:
 
@@ -42,6 +43,7 @@ Running in foreground:
 npm start
 ```
 or
+
 Running in background with pm2:
 ```bash
 pm2 start index.js --name adguard-exporter
@@ -50,7 +52,8 @@ pm2 start index.js --name adguard-exporter
 
 6. Access metrics:
 
-The metrics are exposed at http://localhost:<EXPORTER_PORT>/metrics. You can configure Prometheus to scrape this endpoint.
+The metrics are exposed at http://localhost:<EXPORTER_PORT>/metrics. 
+You can configure Prometheus to scrape this endpoint.
 
 ## Metrics Provided
 
