@@ -11,14 +11,15 @@ This really fucking simple Node app serves as a Prometheus exporter for AdGuard 
   - `ADGUARD_USERNAME`: Username for accessing AdGuard Home API
   - `ADGUARD_PASSWORD`: Password for accessing AdGuard Home API
   - `EXPORTER_PORT`: Port on which this exporter will run
+- OPTIONAL: PM2 (for running the exporter in the background)
 
 ## Installation and Usage
 
 1. Clone the repository:
 
 ```bash
-git clone <repository-url>
-cd adguard-prometheus-exporter
+git clone https://github.com/R1911/adguard-exporter
+cd adguard-exporter
 ```
 
 2. Install dependencies:
