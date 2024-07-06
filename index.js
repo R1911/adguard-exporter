@@ -11,6 +11,16 @@ const EXPORTER_PORT = process.env.EXPORTER_PORT;
 const getDateTime = () => new Date().toLocaleString().replace(",", "");
 
 // Prometheus metrics
+const exporterInfo = new client.Gauge({
+  name: "adguard_exporter_info",
+  help: "Information about the AdGuard Prometheus exporter",
+  labelNames: ["version", "node_version"],
+});
+const timeUnits = new client.Gauge({
+  name: "adguard_time_units",
+  help: "Time units used by AdGuard metrics",
+  labelNames: ["time_unit"],
+});
 const totalDnsQueries = new client.Gauge({
   name: "adguard_total_dns_queries",
   help: "Total DNS queries",
@@ -32,18 +42,59 @@ const topClients = new client.Gauge({
   help: "Top clients by number of DNS queries",
   labelNames: ["client"],
 });
-
 const topBlockedDomains = new client.Gauge({
   name: "adguard_top_blocked_domains",
   help: "Top domains blocked by AdGuard Home",
   labelNames: ["domain"],
 });
-
 const topQueriedDomains = new client.Gauge({
   name: "adguard_top_queried_domains",
   help: "Top domains queried by clients",
   labelNames: ["domain"],
 });
+const topUpstreamsResponses = new client.Gauge({
+  name: "adguard_top_upstreams_responses",
+  help: "Top upstream responses",
+  labelNames: ["upstream"],
+});
+const topUpstreamsAvgTime = new client.Gauge({
+  name: "adguard_top_upstreams_avg_time",
+  help: "Top upstream average response time",
+  labelNames: ["upstream"],
+});
+const numReplacedSafebrowsing = new client.Gauge({
+  name: "adguard_num_replaced_safebrowsing",
+  help: "Number of requests replaced by Safebrowsing",
+});
+const numReplacedSafesearch = new client.Gauge({
+  name: "adguard_num_replaced_safesearch",
+  help: "Number of requests replaced by Safesearch",
+});
+const numReplacedParental = new client.Gauge({
+  name: "adguard_num_replaced_parental",
+  help: "Number of requests replaced by Parental control",
+});
+const periodicDnsQueries = new client.Gauge({
+  name: "adguard_periodic_dns_queries",
+  help: "Periodic DNS queries",
+  labelNames: ["period"],
+});
+const periodicBlockedFiltering = new client.Gauge({
+  name: "adguard_periodic_blocked_filtering",
+  help: "Periodic blocked filtering",
+  labelNames: ["period"],
+});
+const periodicReplacedSafebrowsing = new client.Gauge({
+  name: "adguard_periodic_replaced_safebrowsing",
+  help: "Periodic replaced safebrowsing",
+  labelNames: ["period"],
+});
+const periodicReplacedParental = new client.Gauge({
+  name: "adguard_periodic_replaced_parental",
+  help: "Periodic replaced parental",
+  labelNames: ["period"],
+});
+exporterInfo.labels("0.0.1", process.version).set(1);
 
 async function fetchAdguardStats() {
   const response = await axios.get(`${ADGUARD_URL}/control/stats`, {
@@ -66,12 +117,22 @@ async function updateMetrics() {
         : 0
     );
     avgProcessingTime.set(stats.avg_processing_time || 0);
+    numReplacedSafebrowsing.set(stats.num_replaced_safebrowsing || 0);
+    numReplacedSafesearch.set(stats.num_replaced_safesearch || 0);
+    numReplacedParental.set(stats.num_replaced_parental || 0);
+
+    updateTimeUnits(stats.time_units || "unknown");
 
     updateTopClientsMetric(stats.top_clients || []);
-
     updateTopBlockedDomainsMetric(stats.top_blocked_domains || []);
-
     updateTopQueriedDomainsMetric(stats.top_queried_domains || []);
+    updateTopUpstreamsResponsesMetric(stats.top_upstreams_responses || []);
+    updateTopUpstreamsAvgTimeMetric(stats.top_upstreams_avg_time || []);
+
+    updatePeriodicMetrics(stats.dns_queries || [], periodicDnsQueries);
+    updatePeriodicMetrics(stats.blocked_filtering || [], periodicBlockedFiltering);
+    updatePeriodicMetrics(stats.replaced_safebrowsing || [], periodicReplacedSafebrowsing);
+    updatePeriodicMetrics(stats.replaced_parental || [], periodicReplacedParental);
   } catch (error) {
     console.error(`${getDateTime()} Error fetching AdGuard stats:`, error);
   }
@@ -126,6 +187,42 @@ function updateTopQueriedDomainsMetric(domains) {
       console.warn(`${getDateTime()} Invalid domain data:`, domain);
     }
   });
+}
+
+function updateTopUpstreamsResponsesMetric(upstreams) {
+  topUpstreamsResponses.reset();
+  upstreams.forEach((upstream) => {
+    const upstreamName = Object.keys(upstream)[0];
+    const numRequests = upstream[upstreamName];
+    if (upstreamName && !isNaN(numRequests)) {
+      topUpstreamsResponses.labels(upstreamName).set(numRequests);
+    }
+  });
+}
+
+function updateTopUpstreamsAvgTimeMetric(upstreams) {
+  topUpstreamsAvgTime.reset();
+  upstreams.forEach((upstream) => {
+    const upstreamName = Object.keys(upstream)[0];
+    const avgTime = upstream[upstreamName];
+    if (upstreamName && !isNaN(avgTime)) {
+      topUpstreamsAvgTime.labels(upstreamName).set(avgTime);
+    }
+  });
+}
+
+function updatePeriodicMetrics(arrayData, metric) {
+  metric.reset();
+  arrayData.forEach((value, index) => {
+    if (!isNaN(value)) {
+      metric.labels(index.toString()).set(value);
+    }
+  });
+}
+
+function updateTimeUnits(units) {
+  timeUnits.reset();
+  timeUnits.labels(units).set(1);
 }
 
 const app = express();
